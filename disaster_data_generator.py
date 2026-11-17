@@ -1,4 +1,4 @@
-"""Synthetic + regional dataset generation for model training."""
+"""Create calibration readings for training and local simulator updates."""
 from pathlib import Path
 
 import numpy as np
@@ -105,34 +105,20 @@ def _synth_row(rng: np.random.Generator, disaster: str) -> dict:
 def generate_dataset(n_per_class: int = 400, seed: int = 42) -> pd.DataFrame:
     """
     Build training data:
-      - bulk synthetic rows (physically correlated features)
-      - regional CSV rows repeated so AP/Telangana examples influence the model
+            - bulk calibration rows covering physically plausible weather scenarios
+
+        Regional CSV data is intentionally excluded. Live predictions use only
+        current weather observations from the weather provider.
     """
     rng = np.random.default_rng(seed)
-    classes = ["flood", "cyclone", "earthquake", "wildfire", "none"]
+    classes = ["flood", "cyclone", "wildfire", "none"]
     rows = []
     for cls in classes:
         for _ in range(n_per_class):
             rows.append(_synth_row(rng, cls))
     synth = pd.DataFrame(rows)
 
-    regional = load_regional_data()
-    if not regional.empty:
-        # Weight regional examples so they meaningfully shape the decision boundary
-        repeats = max(1, (n_per_class // max(len(regional), 1)) * 2)
-        regional_boosted = pd.concat([regional] * repeats, ignore_index=True)
-        # Align columns
-        for col in FEATURE_COLS + [LABEL_COL, "risk_level"]:
-            if col not in regional_boosted.columns:
-                regional_boosted[col] = np.nan if col != LABEL_COL else "none"
-        combined = pd.concat(
-            [synth, regional_boosted[FEATURE_COLS + [LABEL_COL, "risk_level"]]],
-            ignore_index=True,
-        )
-    else:
-        combined = synth
-
-    return combined.sample(frac=1.0, random_state=seed).reset_index(drop=True)
+    return synth.sample(frac=1.0, random_state=seed).reset_index(drop=True)
 
 
 # Coastal AP cities — higher cyclone probability

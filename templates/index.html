@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Disaster Command — AP & Telangana</title>
+  <title>Regional Weather Intelligence — AP & Telangana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
-<body data-theme="dark" data-accent="blue">
+<body data-theme="dark" data-accent="amber">
   <div class="bg-blooms" aria-hidden="true">
     <div class="bloom bloom-a"></div>
     <div class="bloom bloom-b"></div>
@@ -30,8 +32,9 @@
         </svg>
       </div>
       <div class="brand-text">
-        <h1>Disaster Command</h1>
-        <p class="brand-sub">Andhra Pradesh · Telangana · Live ML</p>
+        <span class="brand-eyebrow">Regional weather intelligence</span>
+        <h1>Weather risk control room</h1>
+        <p class="brand-sub">Andhra Pradesh · Telangana · Live situational awareness</p>
       </div>
     </div>
 
@@ -56,6 +59,7 @@
       <div class="control-group">
         <label class="control-label" for="accentSelect">Accent</label>
         <select id="accentSelect" class="glass-select" aria-label="Accent color">
+          <option value="lime">Lime</option>
           <option value="blue">Blue</option>
           <option value="teal">Teal</option>
           <option value="amber">Amber</option>
@@ -72,13 +76,13 @@
         <span class="pill-state" id="voiceState">On</span>
       </button>
 
-      <button id="smsToggle" class="status-pill is-off" type="button" aria-pressed="false" title="Toggle SMS alerts">
+      <button id="macAlertsToggle" class="status-pill" type="button" aria-pressed="true" title="Toggle offline Mac alerts">
         <svg class="pill-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
           <rect x="3" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/>
           <path d="M3 7l7 4 7-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
-        <span class="pill-label">SMS</span>
-        <span class="pill-state" id="smsState">Off</span>
+        <span class="pill-label">Mac alerts</span>
+        <span class="pill-state" id="macAlertsState">On</span>
       </button>
 
       <button id="prefsToggle" class="status-pill" type="button" title="Panel layout &amp; filters" aria-expanded="false">
@@ -95,6 +99,102 @@
       </div>
     </div>
   </header>
+
+  <nav class="module-nav" aria-label="Portal modules">
+    <a class="module-nav-active" href="#overview">Overview</a>
+    <a href="#risk-map">Risk map</a>
+    <a href="#alerts">Alerts</a>
+    <a href="#places">Place forecasts</a>
+    <a href="#sms-broadcast">SMS broadcast</a>
+    <a href="#sms-recipients">SMS recipients</a>
+    <a href="#sms-demo">SMS demo</a>
+    <a href="#simulator">Simulator</a>
+  </nav>
+
+  <section class="hero-shell" aria-label="Live disaster overview">
+    <div class="hero-card glass elev-2">
+      <div class="hero-copy">
+        <span class="hero-kicker">Live operations board</span>
+        <h2>Storm pressure is building across key weather zones.</h2>
+        <p>Regional monitoring, early warning detection, and rapid emergency escalation for AP and Telangana.</p>
+      </div>
+      <div class="hero-metrics">
+        <div class="mini-stat">
+          <span>Critical zones</span>
+          <strong>04</strong>
+          <small>High priority</small>
+        </div>
+        <div class="mini-stat">
+          <span>Risk index</span>
+          <strong>72%</strong>
+          <small>Elevated</small>
+        </div>
+        <div class="mini-stat">
+          <span>Response time</span>
+          <strong>02m</strong>
+          <small>System alert</small>
+        </div>
+      </div>
+    </div>
+    <div class="hero-toolbar glass elev-1">
+      <button type="button" class="soft-action active">Escalate alert</button>
+      <button type="button" class="soft-action">Share brief</button>
+      <button type="button" class="soft-action">Run scenario</button>
+    </div>
+  </section>
+
+  <section id="overview" class="status-rail" aria-label="Monitoring overview">
+    {% set coverage = place_coverage|default({}, true) %}
+    <div class="status-intro overview-intro">
+      <span class="section-kicker">Operations overview</span>
+      <h2>Two-state weather picture</h2>
+      <p>Live observations and risk signals for every mapped place.</p>
+    </div>
+    <div class="status-metric">
+      <span class="metric-label">Coverage</span>
+      <strong id="coverageMetric">{{ coverage.total|default("0", true) }}</strong>
+      <span class="metric-detail">places · both states</span>
+    </div>
+    <div class="status-metric">
+      <span class="metric-label">Active alerts</span>
+      <strong id="activeAlertMetric">0</strong>
+      <span class="metric-detail">currently raised</span>
+    </div>
+    <div class="status-metric">
+      <span class="metric-label">Live weather</span>
+      <strong id="stationMetric">{{ coverage.total|default("0", true) }}</strong>
+      <span class="metric-detail">locations · both states</span>
+    </div>
+    <div class="status-metric status-metric-live">
+      <span class="metric-label">Feed status</span>
+      <strong><i></i>Live</strong>
+      <span class="metric-detail">SSE monitoring active</span>
+    </div>
+    <div class="state-map-grid">
+      <article class="state-map-card">
+        <div class="state-map-heading">
+          <div>
+            <span class="section-kicker">State coverage</span>
+            <h3>Andhra Pradesh</h3>
+          </div>
+          <span class="state-map-count" id="apMapCount">{{ coverage["Andhra Pradesh"]|default("0", true) }} places</span>
+        </div>
+        <div id="apMap" class="state-map" aria-label="Andhra Pradesh place map"></div>
+        <div id="apMapLabels" class="state-map-labels" aria-label="Andhra Pradesh mapped places"></div>
+      </article>
+      <article class="state-map-card">
+        <div class="state-map-heading">
+          <div>
+            <span class="section-kicker">State coverage</span>
+            <h3>Telangana</h3>
+          </div>
+          <span class="state-map-count" id="tsMapCount">{{ coverage["Telangana"]|default("0", true) }} places</span>
+        </div>
+        <div id="tsMap" class="state-map" aria-label="Telangana place map"></div>
+        <div id="tsMapLabels" class="state-map-labels" aria-label="Telangana mapped places"></div>
+      </article>
+    </div>
+  </section>
 
   <!-- Customize drawer -->
   <aside id="prefsDrawer" class="prefs-drawer glass elev-2" hidden>
@@ -143,7 +243,7 @@
   </aside>
 
   <main class="layout" id="mainLayout">
-    <section class="panel glass elev-1 globe-panel" data-panel-id="globe">
+    <section id="risk-map" class="panel glass elev-1 globe-panel" data-panel-id="globe">
       <div class="panel-head">
         <div class="panel-title">
           <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
@@ -151,20 +251,51 @@
             <ellipse cx="10" cy="10" rx="3" ry="7.5" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>
             <path d="M2.5 10h15" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>
           </svg>
-          <h2>Regional risk map</h2>
+          <div>
+            <span class="panel-kicker">Spatial overview</span>
+            <h2>Regional risk map</h2>
+          </div>
         </div>
         <span class="panel-meta" id="regionCount">14 stations</span>
       </div>
-      <div id="globeContainer" class="globe-container"></div>
+      <div id="globeContainer" class="globe-container">
+        <aside class="globe-place-index" aria-label="All monitored places">
+          <div class="globe-place-index-head">
+            <span>All places</span>
+            <span id="globePlaceCount">0</span>
+          </div>
+          <div id="globePlaceList" class="globe-place-list">
+            <span class="panel-meta">Loading places...</span>
+          </div>
+        </aside>
+      </div>
       <div class="legend">
         <span class="leg leg-critical"><i></i>Critical</span>
         <span class="leg leg-high"><i></i>High</span>
         <span class="leg leg-medium"><i></i>Medium</span>
         <span class="leg leg-low"><i></i>Low / calm</span>
       </div>
+      <div class="state-map-grid risk-state-map-grid">
+        <article class="state-map-card">
+          <div class="state-map-heading">
+            <div><span class="section-kicker">Risk coverage</span><h3>Andhra Pradesh</h3></div>
+            <span class="state-map-count" id="riskApMapCount">26,802 places</span>
+          </div>
+          <div id="riskApMap" class="state-map" aria-label="Andhra Pradesh risk map"></div>
+          <div id="riskApMapLabels" class="state-map-labels" aria-label="Andhra Pradesh risk map places"></div>
+        </article>
+        <article class="state-map-card">
+          <div class="state-map-heading">
+            <div><span class="section-kicker">Risk coverage</span><h3>Telangana</h3></div>
+            <span class="state-map-count" id="riskTsMapCount">13,224 places</span>
+          </div>
+          <div id="riskTsMap" class="state-map" aria-label="Telangana risk map"></div>
+          <div id="riskTsMapLabels" class="state-map-labels" aria-label="Telangana risk map places"></div>
+        </article>
+      </div>
     </section>
 
-    <section class="panel glass elev-1 alerts-panel" data-panel-id="alerts">
+    <section id="alerts" class="panel glass elev-1 alerts-panel" data-panel-id="alerts">
       <div class="panel-head">
         <div class="panel-title">
           <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
@@ -183,23 +314,140 @@
       </div>
     </section>
 
-    <section class="panel glass elev-1 chart-panel" data-panel-id="chart">
+    <section id="places" class="panel glass elev-1 places-panel" data-panel-id="places">
       <div class="panel-head">
         <div class="panel-title">
           <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
-            <path d="M3 14l4-4 3 3 6-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 17h14" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+            <path d="M4 5.5h12M4 10h12M4 14.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="15" cy="14.5" r="1.5" stroke="currentColor" stroke-width="1.2"/>
           </svg>
-          <h2>Live telemetry</h2>
+          <h2>Place forecasts</h2>
         </div>
-        <span class="panel-meta">Rain · Wind · Seismic</span>
+        <div class="forecast-tools">
+          <label class="sr-only" for="placeSearch">Search places</label>
+          <div class="forecast-search-wrap">
+            <svg class="forecast-search-icon" viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="m12.2 12.2 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input id="placeSearch" class="forecast-search" type="search" placeholder="Search places..." autocomplete="off" />
+            <button id="clearPlaceSearch" class="forecast-search-clear" type="button" aria-label="Clear place search" title="Clear search">×</button>
+          </div>
+          <label class="sr-only" for="placeStateFilter">Filter by state</label>
+          <select id="placeStateFilter" class="glass-select" aria-label="Filter forecasts by state">
+            <option value="all">All states</option>
+            <option value="Andhra Pradesh">Andhra Pradesh</option>
+            <option value="Telangana">Telangana</option>
+          </select>
+          <span class="panel-meta" id="forecastStatus">Loading places...</span>
+        </div>
       </div>
-      <div class="chart-wrap">
-        <canvas id="telemetryChart"></canvas>
+      <div class="places-table-wrap">
+        <table class="places-table">
+          <thead>
+            <tr>
+              <th>Place</th>
+              <th>Current weather</th>
+              <th>Disaster prediction</th>
+              <th>Confidence</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="placeForecasts">
+            <tr><td colspan="5" class="table-message">Loading live weather and predictions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="places-load-more">
+        <button id="loadMorePlaces" class="btn-secondary" type="button" hidden>Load more places</button>
+        <button id="loadAllPlaces" class="btn-secondary" type="button">Load all live weather</button>
       </div>
     </section>
 
-    <section class="panel glass elev-1 sim-panel" data-panel-id="sim">
+    <section id="sms-broadcast" class="panel glass elev-1 sms-broadcast-panel" data-panel-id="sms-broadcast">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M3 4.5h14v9H9l-4 3v-3H3v-9z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M6 8h8M6 11h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <span class="panel-kicker">SIM7600 delivery</span>
+            <h2>Send an SMS broadcast</h2>
+          </div>
+        </div>
+        <span class="panel-meta">Up to 5,000 recipients</span>
+      </div>
+      <form id="smsBroadcastForm" class="sms-broadcast-form">
+        <label class="sms-field">
+          <span>Mobile numbers</span>
+          <textarea id="smsNumbers" name="numbers" rows="4" placeholder="+919876543210&#10;+919812345678" required></textarea>
+          <small>Enter one number per line or separate numbers with commas.</small>
+        </label>
+        <div class="sms-field">
+          <span>Automatic alert message</span>
+          <div id="smsAutoMessage" class="sms-message-preview">Loading latest alert...</div>
+          <small>The newest active disaster and risk level will be used automatically.</small>
+        </div>
+        <div class="sms-broadcast-actions">
+          <button class="btn-primary" type="submit">Save &amp; send SMS</button>
+          <span id="smsBroadcastStatus" class="panel-meta" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="sms-recipients" class="panel glass elev-1 sms-recipient-panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <circle cx="10" cy="6" r="3" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M4 17c.7-3 2.7-4.5 6-4.5s5.3 1.5 6 4.5M16 5v5M13.5 7.5h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <span class="panel-kicker">Recipient directory</span>
+            <h2>Manage SMS recipients</h2>
+          </div>
+        </div>
+        <span id="smsRecipientCount" class="panel-meta">0 recipients</span>
+      </div>
+      <div class="sms-recipient-manager">
+        <form id="smsRecipientForm" class="sms-recipient-form">
+          <label class="sr-only" for="smsRecipientNumber">Mobile number</label>
+          <input id="smsRecipientNumber" type="tel" placeholder="Add mobile number" autocomplete="tel" />
+          <button class="btn-primary" type="submit">Add recipient</button>
+        </form>
+        <div id="smsRecipientList" class="sms-recipient-list">
+          <span class="panel-meta">No saved recipients</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="sms-demo" class="panel glass elev-1 sms-demo-panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M5 3.5h10v13H5zM8 6h4M8 9h4M8 12h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <span class="panel-kicker">Delivery test</span>
+            <h2>SMS demo</h2>
+          </div>
+        </div>
+        <span class="panel-meta">Uses saved recipients</span>
+      </div>
+      <form id="smsDemoForm" class="sms-demo-form">
+        <label class="sms-field">
+          <span>Test message</span>
+          <textarea id="smsDemoMessage" rows="3" maxlength="1600" placeholder="Type a test message..." required></textarea>
+        </label>
+        <div class="sms-demo-actions">
+          <button class="btn-primary" type="submit">Send test SMS</button>
+          <span id="smsDemoStatus" class="panel-meta" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="simulator" class="panel glass elev-1 sim-panel" data-panel-id="sim">
       <div class="panel-head">
         <div class="panel-title">
           <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
@@ -254,6 +502,22 @@
           <div id="simResult" class="sim-result" hidden></div>
         </div>
       </form>
+    </section>
+
+    <section class="panel glass elev-1 chart-panel" data-panel-id="chart">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M3 14l4-4 3 3 6-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 17h14" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          </svg>
+          <h2>Live telemetry</h2>
+        </div>
+        <span class="panel-meta">Rain · Wind · Seismic</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="telemetryChart"></canvas>
+      </div>
     </section>
   </main>
 

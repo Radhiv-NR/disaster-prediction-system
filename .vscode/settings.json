@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "/Users/narramneniradhiv/Downloads/disaster-prediction /venv/bin/python",
+  "python.analysis.extraPaths": [
+    "/Users/narramneniradhiv/Downloads/disaster-prediction "
+  ]
+}

@@ -1,216 +1,192 @@
-# Real-Time Disaster Prediction & Alert System
+# Disaster monitoring for AP and Telangana
 
-Flask + ML (RandomForest) + MySQL 8.4 + glassmorphic 3D dashboard (Three.js) focused on **Andhra Pradesh & Telangana**.
+A small Flask control room for watching current weather, testing risk scenarios,
+and sending alerts from a local machine. It covers Andhra Pradesh and Telangana,
+with SQLite for an easy local start and MySQL when the app is deployed more
+permanently.
 
-Live sensor simulation → ML prediction → SSE push → multilingual voice (English / Hindi / Telugu) → optional Twilio SMS.
+## What it does
 
----
+- Live weather monitoring across multiple regional stations
+- Weather-based prediction for flood, cyclone, wildfire, or calm conditions
+- Real-time dashboard updates using Server-Sent Events
+- 3D regional risk map and telemetry chart
+- Alert feed that can be filtered by risk, hazard, and state
+- Voice alerts in English, Hindi, and Telugu
+- Offline macOS Notification Center alerts
+- SIM7600 GSM SMS alert support
+- Telegram alerts for a group or a list of users
+- What-if simulator for testing different weather conditions
+- MySQL support with an automatic SQLite fallback for local development
 
-## Project layout
+## Tech stack
 
-```
+- Python
+- Flask
+- SQLAlchemy
+- scikit-learn
+- pandas and numpy
+- Open-Meteo weather API and OpenStreetMap tiles through Leaflet
+- MySQL / SQLite
+- Chart.js and Three.js
+- pyttsx3
+- joblib
+
+## Project structure
+
+```text
 disaster-prediction/
-├── app.py                      # Flask entrypoint (routes, simulator, SSE)
+├── app.py
+├── alert_system.py
 ├── config.py
-├── database.py                 # SQLAlchemy models + AP/TS region seed
-├── alert_system.py             # SSE · pyttsx3 (en/hi/te) · Twilio SMS
+├── database.py
 ├── disaster_data_generator.py
 ├── model_training.py
+├── weather_service.py
 ├── requirements.txt
-├── setup_database.sql          # Run in MySQL Workbench
-├── .env.example
+├── setup_database.sql
 ├── data/
-│   └── andhra_telangana_disasters.csv   # Two-state labelled sections
+│   └── andhra_telangana_disasters.csv
 ├── logs/
-├── models/                     # disaster_model.joblib written at first run
-├── static/css/style.css
-├── static/js/script.js
-└── templates/index.html
+├── models/
+├── static/
+│   ├── css/
+│   └── js/
+├── templates/
+│   └── index.html
+└── README.md
 ```
 
----
+## Before you start
 
-## 1. Prerequisites (macOS)
+- Python 3.12
+- MySQL 8.4, if you do not want to use the local SQLite database
+- pip
 
-### 1.1 Python 3.14
+## Setup
 
-```bash
-brew install python@3.14
-echo 'export PATH="/opt/homebrew/opt/python@3.14/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-python3.14 --version
-```
-
-### 1.2 MySQL 8.4
+1. Create a virtual environment
 
 ```bash
-brew install mysql@8.4
-echo 'export PATH="/opt/homebrew/opt/mysql@8.4/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-brew services start mysql@8.4
-mysql_secure_installation   # set root password (one-time CLI step)
-```
-
-### 1.3 MySQL Workbench
-
-```bash
-brew install --cask mysqlworkbench
-```
-
-Open Workbench → create a connection to `127.0.0.1:3306` as `root` → Test Connection.
-
----
-
-## 2. Get the project
-
-```bash
-cd ~/Documents/disaster-prediction   # or wherever you unzipped it
-ls   # should show app.py, setup_database.sql, …
-```
-
----
-
-## 3. Database setup (MySQL Workbench)
-
-1. **File → Open SQL Script…** → select `setup_database.sql`
-2. Change the password on the `CREATE USER` line
-3. Click the **yellow lightning bolt** (Execute)
-4. Confirm in the Output panel (green checks) and Result Grid:
-   - `disaster_prediction_db` exists
-   - `disaster_user` exists
-5. Right-click **SCHEMAS → Refresh All** if the schema doesn’t appear yet
-
-Tables (`regions`, `sensor_readings`, `prediction_logs`, `alerts`) are created automatically the first time you run `python app.py`.
-
----
-
-## 4. Python environment
-
-```bash
-cd ~/Documents/disaster-prediction
-python3.14 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
+```
+
+2. Install dependencies
+
+```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Pinned stack:
+3. Copy `.env.example` to `.env` and replace the placeholders. Start with the
+weather settings below; the other alert channels can stay disabled until you
+configure them.
 
-```
-Flask==2.3.0
-Flask-CORS==4.0.0
-pandas==2.2.3
-numpy==1.26.4
-scikit-learn==1.4.2
-mysql-connector-python==8.2.0
-requests==2.31.0
-python-dotenv==1.0.0
-pyttsx3==2.90
-joblib==1.4.2
-Werkzeug==2.3.0
-SQLAlchemy==2.0.30
+Open-Meteo does not require an API key. Use these settings:
+
+```env
+WEATHER_PROVIDER=open_meteo
+WEATHER_ENABLED=true
 ```
 
----
+The dashboard uses OpenStreetMap tiles through Leaflet, so no browser map key
+is needed. Keep `.env` out of version control.
 
-## 5. Configure `.env`
+## Start the dashboard
 
 ```bash
-cp .env.example .env
-```
-
-Set `DB_PASSWORD` to the **same** password you used in `setup_database.sql` for `disaster_user`.
-
-Optional:
-
-| Variable | Meaning |
-|---|---|
-| `TTS_ENABLED` | Voice alerts on/off (default `true`) |
-| `TTS_MIN_RISK` | `high` or `critical` |
-| `TTS_LANGUAGE` | `en` / `hi` / `te` |
-| `SMS_ENABLED` | Twilio SMS (default `false`) |
-| `SIMULATOR_INTERVAL_SECONDS` | Demo feed speed |
-
----
-
-## 6. Run
-
-```bash
-source venv/bin/activate
 python app.py
 ```
 
-Open **http://127.0.0.1:8000**
+Open:
 
-First launch trains the model (~10s) and seeds 14 AP/Telangana stations.
+```text
+http://127.0.0.1:8000
+```
 
----
+## Production deployment
 
-## 7. Voice alerts (English · Hindi · Telugu)
+Use a WSGI server instead of `python app.py` in production:
 
-Dashboard top bar: language dropdown + Voice On/Off.
+```bash
+gunicorn --bind 0.0.0.0:8000 --workers 2 --threads 4 wsgi:app
+```
 
-- English ships with macOS
-- Hindi: system voice **Lekha** (usually preinstalled)
-- Telugu: add a Telugu voice in **System Settings → Accessibility → Spoken Content → System Voice** if you want native pronunciation; otherwise it falls back gracefully
+Set these values in the deployment environment:
 
-Threshold controlled by `TTS_MIN_RISK`.
+```env
+FLASK_DEBUG=false
+FLASK_HOST=0.0.0.0
+CORS_ORIGINS=https://your-dashboard.example.com
+SIMULATOR_ENABLED=false
+LIVE_ALERTS_ENABLED=true
+```
 
----
+Use MySQL for a multi-worker deployment. Keep `.env` and all provider
+credentials outside version control, and put the service behind HTTPS and an
+authentication layer before exposing it to the public internet.
 
-## 8. SMS alerts (Twilio)
+## How the pieces fit together
 
-1. Create a free account at [twilio.com](https://www.twilio.com)
-2. Copy Account SID, Auth Token, and a From number
-3. Put them in `.env` along with `SMS_TO_NUMBERS=+91XXXXXXXXXX`
-4. Set `SMS_ENABLED=true`
-5. **Trial accounts** can only text verified numbers (Twilio Console → Verified Caller IDs)
+- The app seeds 29 monitoring regions. The simulator produces a reading for one
+	region at a time, while the live alert worker checks configured regions on its
+	own interval.
+- The classifier is trained from generated calibration scenarios. Live
+	predictions use the five weather fields supplied by the provider; an
+	earthquake cannot be inferred from weather alone.
+- The place catalog contains 40,026 populated places. It is searched in pages
+	so opening the dashboard does not issue thousands of weather requests at
+	once. Try `/api/places?q=place-name&state=Telangana` and then
+	`/api/weather?place_id=GEONAMES_ID`.
+- SMS delivery needs a connected SIM7600 modem and recipients saved in the
+	dashboard. Email and Telegram are separate channels with their own settings.
+- Hindi and Telugu voice alerts depend on matching voices being installed on
+	the host machine.
 
-Dashboard shows an **SMS** pill; `POST /api/sms/test` sends a trial message.
+### Offline alerts on macOS
 
----
+macOS Notification Center and the built-in `say` voice engine work without
+internet access. Enable them in `.env`:
 
-## 9. Regional training data
+```env
+MACOS_NOTIFICATIONS_ENABLED=true
+MACOS_NOTIFICATIONS_MIN_RISK=high
+TTS_ENABLED=true
+```
 
-`data/andhra_telangana_disasters.csv` is split into:
+The local dashboard, simulator, database, voice alerts, and macOS notifications
+work offline. Live weather updates require an internet connection. Sending a
+message to people on other devices while completely offline requires a local
+Wi-Fi/LAN receiver, radio, or a working cellular modem such as the SIM7600.
 
-- **SECTION 1: ANDHRA PRADESH** — flood / cyclone / earthquake / wildfire / calm
-- **SECTION 2: TELANGANA** — same disaster types
+### Free Telegram alerts
 
-Rows are blended into synthetic training data so the model is grounded in local geography. They are plausible scenarios, not claimed historical instrument readings.
+Telegram is the recommended alert channel when a SIM7600 is unavailable. It
+does not require a paid SMS provider or extra Python package.
 
----
+1. In Telegram, open `@BotFather`, run `/newbot`, and copy the bot token.
+2. Add the bot to a Telegram group, or have each recipient open the bot and
+	press **Start**.
+3. Get the group or user chat ID. A simple method is to send a message in the
+	chat, then open:
+	`https://api.telegram.org/botYOUR_TOKEN/getUpdates`
+4. Set these values in `.env`:
 
-## 10. Common issues
+```env
+TELEGRAM_ENABLED=true
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_IDS=-1001234567890,123456789
+TELEGRAM_MIN_RISK=high
+```
 
-| Symptom | Fix |
-|---|---|
-| Workbench can’t connect | `brew services start mysql@8.4`; check port 3306 |
-| Schema missing in sidebar | Right-click SCHEMAS → Refresh All |
-| Access denied for `disaster_user` | Password in `.env` must match `setup_database.sql` |
-| App falls back to SQLite | MySQL not reachable — fine for UI testing; fix credentials for production |
-| No voice on Linux CI | Expected — pyttsx3 needs a speech driver; macOS uses built-in |
-| SMS not sending | Credentials empty or trial number not verified |
-| `SOURCE setup_database.sql` path error in CLI | Prefer Workbench; or `mysql -u root -p < /full/path/setup_database.sql` |
+Restart the app and test delivery:
 
----
+```bash
+curl -X POST http://127.0.0.1:8000/api/telegram/test \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Telegram alert test"}'
+```
 
-## API quick reference
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/api/health` | Liveness |
-| GET | `/api/regions` | Seeded stations |
-| POST | `/api/sensors/ingest` | Push a reading |
-| POST | `/api/predict` | What-if only (no DB write) |
-| GET | `/api/alerts` | Recent alerts |
-| GET | `/api/telemetry` | Recent sensor series |
-| GET | `/stream/live` | SSE (sensor + alert events) |
-| GET/POST | `/api/tts/*` | Status, toggle, language, speak |
-| GET/POST | `/api/sms/*` | Status, toggle, test |
-
----
-
-## Stop
-
-`Ctrl+C` in the app terminal. Optionally `brew services stop mysql@8.4`.
+Use a Telegram group chat ID to notify many people with one entry. Keep the
+bot token private and never commit it to source control.
