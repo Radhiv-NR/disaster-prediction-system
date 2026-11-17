@@ -1,188 +1,136 @@
-# Disaster monitoring for AP and Telangana
+# Andhra Pradesh & Telangana Disaster Monitoring
 
-Real-Time Disaster Prediction and Alert System Using Machine Learning and Big Data Analytics
+A local dashboard for exploring weather conditions and estimated disaster risk
+across Andhra Pradesh and Telangana. It brings regional weather, a small
+machine-learning experiment, a what-if simulator, and optional alert channels
+into one Flask app.
 
-A small Flask control room for watching current weather, testing risk scenarios,
-and sending alerts from a local machine. It covers Andhra Pradesh and Telangana,
-with SQLite for an easy local start and MySQL when the app is deployed more
-permanently.
+> **Please treat this as a prototype, not an official warning service.** Its
+> predictions are estimates from a rule-assisted model trained on generated
+> scenarios. They are not validated emergency guidance and must not replace
+> official weather or disaster-management advisories.
 
-## What it does
+## What you can do
 
-- Live weather monitoring across multiple regional stations
-- Weather-based prediction for flood, cyclone, wildfire, or calm conditions
-- Real-time dashboard updates using Server-Sent Events
-- 3D regional risk map and telemetry chart
-- Alert feed that can be filtered by risk, hazard, and state
-- Voice alerts in English, Hindi, and Telugu
-- Offline macOS Notification Center alerts
-- SIM7600 GSM SMS alert support
-- Telegram alerts for a group or a list of users
-- What-if simulator for testing different weather conditions
-- MySQL support with an automatic SQLite fallback for local development
+- View monitoring regions and search a catalog of places in both states.
+- See current weather when the configured provider and internet connection are
+  available.
+- Review estimated flood, cyclone, wildfire, and no-hazard conditions, along
+  with recent alerts and sensor telemetry.
+- Watch the dashboard update through a live server-sent event stream.
+- Adjust weather inputs in the what-if simulator without sending a sensor
+  reading.
+- Configure optional voice, macOS notification, SIM7600 SMS, Telegram, and
+  email alerts.
 
-## Tech stack
+The app starts with a simulator enabled, so it can produce sample readings for
+the dashboard. When live weather is enabled but unavailable, simulator readings
+are skipped rather than presented as current weather. Disable live weather to
+use simulated readings without an internet connection.
 
-- Python
-- Flask
-- SQLAlchemy
-- scikit-learn
-- pandas and numpy
-- Open-Meteo weather API and OpenStreetMap tiles through Leaflet
-- MySQL / SQLite
-- Chart.js and Three.js
-- pyttsx3
-- joblib
+## How predictions work
 
-## Project structure
+The model uses five weather inputs: temperature, relative humidity, rainfall,
+wind speed, and surface pressure. The training code builds generated
+calibration scenarios and fits a scikit-learn random-forest pipeline. A small
+set of weather thresholds also identifies severe conditions before the model
+is used.
 
-```text
-disaster-prediction/
-├── app.py
-├── alert_system.py
-├── config.py
-├── database.py
-├── disaster_data_generator.py
-├── model_training.py
-├── weather_service.py
-├── requirements.txt
-├── setup_database.sql
-├── data/
-│   └── andhra_telangana_disasters.csv
-├── logs/
-├── models/
-├── static/
-│   ├── css/
-│   └── js/
-├── templates/
-│   └── index.html
-└── README.md
-```
+This is **not** a model trained or validated on a comprehensive, independently
+verified history of disasters. Weather alone cannot detect earthquakes, and
+the simulator's seismic, river, and soil-moisture values do not make those
+hazards predictable in the current model. Treat displayed risk as experimental.
 
-## Before you start
+## Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `app.py` | Flask pages, API routes, simulator, and live alert checks |
+| `alert_system.py` | Live event broadcasting and optional notification channels |
+| `config.py` | Reads settings from `.env` |
+| `database.py` | SQLAlchemy models, default monitoring regions, and database setup |
+| `weather_service.py` | Open-Meteo or Google Weather lookups with a short cache |
+| `disaster_data_generator.py` | Generated training scenarios and simulator readings |
+| `model_training.py` | Train, load, and run the weather-risk model |
+| `wsgi.py` | WSGI entry point for Gunicorn |
+| `templates/`, `static/` | Dashboard HTML, styles, and browser-side code |
+| `data/ap_telangana_places.csv` | Place names and coordinates used by search and maps |
+| `data/andhra_telangana_disasters.csv` | Regional disaster dataset included with the project |
+| `data/disaster_local.db` | Local SQLite database, used when MySQL is unavailable |
+| `setup_database.sql` | Optional MySQL database and user setup |
+| `tests/` | Focused prediction and email-alert tests |
+
+## Requirements
 
 - Python 3.12
-- MySQL 8.4, if you do not want to use the local SQLite database
-- pip
+- `pip`
+- Internet access for live weather and Telegram/email delivery
+- Optional: MySQL, a SIM7600 modem, and provider credentials for the related
+  integrations
 
-## Setup
+The app tries MySQL using the `DB_*` settings. If it cannot connect, it uses
+`data/disaster_local.db` instead. For local development, MySQL is optional.
 
-1. Create a virtual environment
+## Run locally
+
+From the project directory:
 
 ```bash
 python3.12 -m venv venv
 source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+python app.py
 ```
 
-2. Install dependencies
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Leave the terminal running
+while you use the dashboard; press **Ctrl+C** to stop the server.
+
+On macOS, if `python` is not on your shell's `PATH`, you can run the app with
+the virtual-environment interpreter directly:
 
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+./venv/bin/python app.py
 ```
 
-3. Copy `.env.example` to `.env` and replace the placeholders. Start with the
-weather settings below; the other alert channels can stay disabled until you
-configure them.
+The server creates database tables and default monitoring regions at startup.
+If the model file is missing, it trains and saves one under `models/`.
 
-Open-Meteo does not require an API key. Use these settings:
+### Weather and offline development
+
+The default provider is Open-Meteo, which does not need an API key. Live
+lookups do need an internet connection. Set these in `.env`:
 
 ```env
 WEATHER_PROVIDER=open_meteo
 WEATHER_ENABLED=true
 ```
 
-The dashboard uses OpenStreetMap tiles through Leaflet, so no browser map key
-is needed. Keep `.env` out of version control.
+To run with generated readings only, set `WEATHER_ENABLED=false`. The simulator
+is controlled separately by `SIMULATOR_ENABLED`; live alert checks are
+controlled by `LIVE_ALERTS_ENABLED`. Restart the app after changing `.env`.
 
-## Start the dashboard
+Google Weather is also supported by the code. To use it, set
+`WEATHER_PROVIDER=google` and configure `GOOGLE_WEATHER_API_KEY`. Google Maps
+tiles are optional and use `GOOGLE_MAPS_API_KEY`.
 
-```bash
-python app.py
-```
+## Optional alert channels
 
-Open:
+All alert integrations can remain disabled while you explore the local
+dashboard. Configure only the channels you intend to use, keep credentials in
+`.env`, and never commit that file.
 
-```text
-http://127.0.0.1:8000
-```
+| Channel | Configuration | Notes |
+| --- | --- | --- |
+| Voice | `TTS_ENABLED`, `TTS_LANGUAGE`, `TTS_MIN_RISK` | Uses the host's speech engine. Hindi and Telugu voices depend on the operating system. |
+| macOS notifications | `MACOS_NOTIFICATIONS_ENABLED`, `MACOS_NOTIFICATIONS_MIN_RISK` | Local Notification Center integration; available on macOS. |
+| SIM7600 SMS | `SMS_ENABLED`, `GSM_PORT`, `GSM_BAUDRATE`, `GSM_TO_NUMBERS`, `SMS_MIN_RISK` | Requires a connected, working modem. Saved dashboard recipients can be used for broadcasts. |
+| Telegram | `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_MIN_RISK` | Create a bot with BotFather and start a chat with it (or add it to a group). Keep its token private. |
+| Email | `EMAIL_ENABLED`, `EMAIL_FROM`, `EMAIL_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `EMAIL_MIN_RISK` | Requires an SMTP server and valid sender/recipient details. |
 
-## Production deployment
-
-Use a WSGI server instead of `python app.py` in production:
-
-```bash
-gunicorn --bind 0.0.0.0:8000 --workers 2 --threads 4 wsgi:app
-```
-
-Set these values in the deployment environment:
-
-```env
-FLASK_DEBUG=false
-FLASK_HOST=0.0.0.0
-CORS_ORIGINS=https://your-dashboard.example.com
-SIMULATOR_ENABLED=false
-LIVE_ALERTS_ENABLED=true
-```
-
-Use MySQL for a multi-worker deployment. Keep `.env` and all provider
-credentials outside version control, and put the service behind HTTPS and an
-authentication layer before exposing it to the public internet.
-
-## How the pieces fit together
-
-- The app seeds 29 monitoring regions. The simulator produces a reading for one
-	region at a time, while the live alert worker checks configured regions on its
-	own interval.
-- The classifier is trained from generated calibration scenarios. Live
-	predictions use the five weather fields supplied by the provider; an
-	earthquake cannot be inferred from weather alone.
-- The place catalog contains 40,026 populated places. It is searched in pages
-	so opening the dashboard does not issue thousands of weather requests at
-	once. Try `/api/places?q=place-name&state=Telangana` and then
-	`/api/weather?place_id=GEONAMES_ID`.
-- SMS delivery needs a connected SIM7600 modem and recipients saved in the
-	dashboard. Email and Telegram are separate channels with their own settings.
-- Hindi and Telugu voice alerts depend on matching voices being installed on
-	the host machine.
-
-### Offline alerts on macOS
-
-macOS Notification Center and the built-in `say` voice engine work without
-internet access. Enable them in `.env`:
-
-```env
-MACOS_NOTIFICATIONS_ENABLED=true
-MACOS_NOTIFICATIONS_MIN_RISK=high
-TTS_ENABLED=true
-```
-
-The local dashboard, simulator, database, voice alerts, and macOS notifications
-work offline. Live weather updates require an internet connection. Sending a
-message to people on other devices while completely offline requires a local
-Wi-Fi/LAN receiver, radio, or a working cellular modem such as the SIM7600.
-
-### Free Telegram alerts
-
-Telegram is the recommended alert channel when a SIM7600 is unavailable. It
-does not require a paid SMS provider or extra Python package.
-
-1. In Telegram, open `@BotFather`, run `/newbot`, and copy the bot token.
-2. Add the bot to a Telegram group, or have each recipient open the bot and
-	press **Start**.
-3. Get the group or user chat ID. A simple method is to send a message in the
-	chat, then open:
-	`https://api.telegram.org/botYOUR_TOKEN/getUpdates`
-4. Set these values in `.env`:
-
-```env
-TELEGRAM_ENABLED=true
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_IDS=-1001234567890,123456789
-TELEGRAM_MIN_RISK=high
-```
-
-Restart the app and test delivery:
+Each channel has a status and test endpoint in the API. For example, after
+configuring Telegram and restarting the app:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/telegram/test \
@@ -190,5 +138,55 @@ curl -X POST http://127.0.0.1:8000/api/telegram/test \
   -d '{"message":"Telegram alert test"}'
 ```
 
-Use a Telegram group chat ID to notify many people with one entry. Keep the
-bot token private and never commit it to source control.
+Testing an integration sends a real notification or message when that channel
+is configured. Use your own test recipient.
+
+## API overview
+
+The Flask app serves the dashboard at `/` and provides JSON endpoints for:
+
+- Health, regions, place search, map data, and current weather:
+  `/api/health`, `/api/regions`, `/api/places`, `/api/place-map`, `/api/weather`
+- Place forecasts and predictions:
+  `/api/place-predictions`, `/api/predict`
+- Sensor ingestion, alerts, and recent telemetry:
+  `/api/sensors/ingest`, `/api/alerts`, `/api/telemetry`
+- A live browser event stream: `/stream/live`
+- Status, toggles, and tests for voice, macOS notifications, SMS, Telegram, and
+  email under `/api/tts`, `/api/macos-notification`, `/api/sms`,
+  `/api/telegram`, and `/api/email`
+
+For example:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+curl 'http://127.0.0.1:8000/api/places?q=Vijayawada&state=Andhra%20Pradesh'
+```
+
+Place and forecast endpoints paginate results; see their `limit` and `offset`
+query parameters.
+
+## Tests
+
+Run the test suite from the project directory:
+
+```bash
+python -m pytest -q
+```
+
+## Deployment
+
+For a single-process production example, the project includes Gunicorn:
+
+```bash
+gunicorn --bind 0.0.0.0:8000 --workers 2 --threads 4 wsgi:app
+```
+
+Before making the dashboard reachable beyond your machine:
+
+- Set `FLASK_DEBUG=false` and configure `FLASK_HOST` and `CORS_ORIGINS`.
+- Use MySQL for a multi-worker deployment; SQLite is intended as a simple local
+  fallback.
+- Put the service behind HTTPS and add authentication and access controls.
+- Keep secrets out of source control and use trusted sources for emergency
+  decisions.
