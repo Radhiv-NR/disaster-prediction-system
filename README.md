@@ -1,5 +1,7 @@
 # Disaster monitoring for AP and Telangana
 
+Real-Time Disaster Prediction and Alert System Using Machine Learning and Big Data Analytics
+
 A small Flask control room for watching current weather, testing risk scenarios,
 and sending alerts from a local machine. It covers Andhra Pradesh and Telangana,
 with SQLite for an easy local start and MySQL when the app is deployed more
