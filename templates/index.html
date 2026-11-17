@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disaster Command — AP & Telangana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body data-theme="dark" data-accent="blue">
+  <div class="bg-blooms" aria-hidden="true">
+    <div class="bloom bloom-a"></div>
+    <div class="bloom bloom-b"></div>
+    <div class="bloom bloom-c"></div>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar glass elev-2">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+          <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" opacity="0.35"/>
+          <circle cx="16" cy="16" r="8" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="16" cy="16" r="3" fill="currentColor"/>
+          <path d="M16 2v4M16 26v4M2 16h4M26 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Disaster Command</h1>
+        <p class="brand-sub">Andhra Pradesh · Telangana · Live ML</p>
+      </div>
+    </div>
+
+    <div class="topbar-controls">
+      <div class="control-group">
+        <label class="control-label" for="langSelect">Language</label>
+        <select id="langSelect" class="glass-select" aria-label="Voice alert language">
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="te">తెలుగు</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="themeSelect">Theme</label>
+        <select id="themeSelect" class="glass-select" aria-label="Color theme">
+          <option value="dark">Dark glass</option>
+          <option value="light">Light glass</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="accentSelect">Accent</label>
+        <select id="accentSelect" class="glass-select" aria-label="Accent color">
+          <option value="blue">Blue</option>
+          <option value="teal">Teal</option>
+          <option value="amber">Amber</option>
+          <option value="purple">Purple</option>
+        </select>
+      </div>
+
+      <button id="voiceToggle" class="status-pill" type="button" aria-pressed="true" title="Toggle voice alerts">
+        <svg class="pill-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
+          <path d="M3 8v4h3l4 3V5L6 8H3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M14 7.5a4 4 0 010 5M16 5.5a7 7 0 010 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="pill-label">Voice</span>
+        <span class="pill-state" id="voiceState">On</span>
+      </button>
+
+      <button id="smsToggle" class="status-pill is-off" type="button" aria-pressed="false" title="Toggle SMS alerts">
+        <svg class="pill-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
+          <rect x="3" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M3 7l7 4 7-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="pill-label">SMS</span>
+        <span class="pill-state" id="smsState">Off</span>
+      </button>
+
+      <button id="prefsToggle" class="status-pill" type="button" title="Panel layout &amp; filters" aria-expanded="false">
+        <svg class="pill-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.5 4.5l1.4 1.4M14.1 14.1l1.4 1.4M15.5 4.5l-1.4 1.4M5.9 14.1l-1.4 1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span class="pill-label">Customize</span>
+      </button>
+
+      <div class="live-indicator" id="liveIndicator" title="SSE connection">
+        <span class="live-dot"></span>
+        <span class="live-text">Connecting</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Customize drawer -->
+  <aside id="prefsDrawer" class="prefs-drawer glass elev-2" hidden>
+    <div class="prefs-head">
+      <h3>Dashboard preferences</h3>
+      <button type="button" id="prefsClose" class="prefs-close" aria-label="Close">×</button>
+    </div>
+    <div class="prefs-section">
+      <h4>Visible panels</h4>
+      <label class="prefs-check"><input type="checkbox" data-panel="globe" checked /> Risk map</label>
+      <label class="prefs-check"><input type="checkbox" data-panel="alerts" checked /> Active alerts</label>
+      <label class="prefs-check"><input type="checkbox" data-panel="chart" checked /> Live telemetry</label>
+      <label class="prefs-check"><input type="checkbox" data-panel="sim" checked /> What-if simulator</label>
+    </div>
+    <div class="prefs-section">
+      <h4>Alert filters</h4>
+      <label class="prefs-field">
+        <span>Minimum risk</span>
+        <select id="filterRisk" class="glass-select">
+          <option value="all">All levels</option>
+          <option value="medium">Medium and above</option>
+          <option value="high" selected>High and critical</option>
+          <option value="critical">Critical only</option>
+        </select>
+      </label>
+      <label class="prefs-field">
+        <span>Disaster type</span>
+        <select id="filterType" class="glass-select">
+          <option value="all" selected>All types</option>
+          <option value="flood">Flood</option>
+          <option value="cyclone">Cyclone</option>
+          <option value="earthquake">Earthquake</option>
+          <option value="wildfire">Wildfire</option>
+        </select>
+      </label>
+      <label class="prefs-field">
+        <span>State</span>
+        <select id="filterState" class="glass-select">
+          <option value="all" selected>AP + Telangana</option>
+          <option value="ap">Andhra Pradesh</option>
+          <option value="ts">Telangana</option>
+        </select>
+      </label>
+    </div>
+    <p class="prefs-hint">Preferences are saved in this browser automatically.</p>
+  </aside>
+
+  <main class="layout" id="mainLayout">
+    <section class="panel glass elev-1 globe-panel" data-panel-id="globe">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/>
+            <ellipse cx="10" cy="10" rx="3" ry="7.5" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>
+            <path d="M2.5 10h15" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>
+          </svg>
+          <h2>Regional risk map</h2>
+        </div>
+        <span class="panel-meta" id="regionCount">14 stations</span>
+      </div>
+      <div id="globeContainer" class="globe-container"></div>
+      <div class="legend">
+        <span class="leg leg-critical"><i></i>Critical</span>
+        <span class="leg leg-high"><i></i>High</span>
+        <span class="leg leg-medium"><i></i>Medium</span>
+        <span class="leg leg-low"><i></i>Low / calm</span>
+      </div>
+    </section>
+
+    <section class="panel glass elev-1 alerts-panel" data-panel-id="alerts">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M10 2.5L17.5 16H2.5L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M10 8v3.5M10 14h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <h2>Active alerts</h2>
+        </div>
+        <span class="panel-meta" id="alertCount">0</span>
+      </div>
+      <div id="alertFeed" class="alert-feed">
+        <div class="empty-state">
+          <p>No active alerts</p>
+          <span>High and critical predictions appear here in real time</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel glass elev-1 chart-panel" data-panel-id="chart">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M3 14l4-4 3 3 6-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 17h14" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          </svg>
+          <h2>Live telemetry</h2>
+        </div>
+        <span class="panel-meta">Rain · Wind · Seismic</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="telemetryChart"></canvas>
+      </div>
+    </section>
+
+    <section class="panel glass elev-1 sim-panel" data-panel-id="sim">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg class="panel-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M10 6v4l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <h2>What-if simulator</h2>
+        </div>
+      </div>
+      <form id="simForm" class="sim-form">
+        <div class="slider-grid">
+          <label class="slider-field">
+            <span>Rainfall <em id="v_rain">40</em> mm</span>
+            <input type="range" name="rainfall_mm" min="0" max="250" value="40" />
+          </label>
+          <label class="slider-field">
+            <span>Wind <em id="v_wind">25</em> km/h</span>
+            <input type="range" name="wind_speed_kmh" min="0" max="200" value="25" />
+          </label>
+          <label class="slider-field">
+            <span>Seismic <em id="v_seis">0.5</em> Mw</span>
+            <input type="range" name="seismic_magnitude" min="0" max="8" step="0.1" value="0.5" />
+          </label>
+          <label class="slider-field">
+            <span>River level <em id="v_river">1.5</em> m</span>
+            <input type="range" name="river_level_m" min="0" max="10" step="0.1" value="1.5" />
+          </label>
+          <label class="slider-field">
+            <span>Temperature <em id="v_temp">30</em> °C</span>
+            <input type="range" name="temperature_c" min="15" max="50" value="30" />
+          </label>
+          <label class="slider-field">
+            <span>Humidity <em id="v_hum">55</em> %</span>
+            <input type="range" name="humidity_pct" min="5" max="100" value="55" />
+          </label>
+          <label class="slider-field">
+            <span>Pressure <em id="v_pres">1012</em> hPa</span>
+            <input type="range" name="pressure_hpa" min="940" max="1030" value="1012" />
+          </label>
+          <label class="slider-field">
+            <span>Soil moisture <em id="v_soil">40</em> %</span>
+            <input type="range" name="soil_moisture_pct" min="0" max="100" value="40" />
+          </label>
+        </div>
+        <div class="sim-actions">
+          <button type="submit" class="btn-primary">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+              <path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Run prediction
+          </button>
+          <div id="simResult" class="sim-result" hidden></div>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>ML-backed · SSE live feed · Offline voice · Optional SMS</span>
+    <span class="mono">localhost:8000</span>
+  </footer>
+
+  <script src="/static/js/script.js"></script>
+</body>
+</html>
